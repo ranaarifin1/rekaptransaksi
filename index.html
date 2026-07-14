@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>XP Finance Manager</title>
+    <title>ARINEX XP FINANCE MANAGER</title>
     <link rel="manifest" href="manifest.json">
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
@@ -113,12 +113,12 @@
 
 <div id="login_screen">
     <div style="margin-bottom: 20px; font-size: 24px; font-style: italic; font-weight: bold; text-shadow: 2px 2px #000;">
-        Windows XP <span style="color:#ff9900">Finance</span>
+        Arinex XP <span style="color:#ff9900">Finance</span>
     </div>
     <div class="login-band">
         <div class="user-avatar"></div>
         <div class="login-form">
-            <h3 style="margin:0; text-shadow: 1px 1px #000;">Administrator</h3>
+            <h3 style="margin:0; text-shadow: 1px 1px #000;">User Login</h3>
             <input type="email" id="login_email" placeholder="Email Firebase">
             <input type="password" id="login_pass" placeholder="Password">
             <button class="login-btn-xp" id="btn_login">Log On</button>
@@ -129,32 +129,32 @@
 
 <div class="xp-window" id="main_app">
     <div class="title-bar">
-        <span>XP Finance Manager</span>
+        <span>Arinex Finance Manager</span>
         <div class="title-bar-btns"><span id="btn_logout">Log Off</span></div>
     </div>
     
     <div class="content">
         <fieldset style="margin-bottom: 8px;">
-            <legend>Pendapatan Bulan Ini</legend>
+            <legend>First Balance Deposit</legend>
             <input type="number" id="total_pendapatan" placeholder="Masukkan total pendapatan">
         </fieldset>
 
         <div class="split-layout">
             <div>
                 <fieldset>
-                    <legend>Pengeluaran Tetap</legend>
+                    <legend>Pengeluaran Fixed</legend>
                     <div class="input-group"><label>1. Cicilan Rp:</label><input type="number" id="cicilan" value="0"></div>
-                    <div class="input-group"><label>2. Kontrakan Rp:</label><input type="number" id="kontrakan" value="0"></div>
+                    <div class="input-group"><label>2. Sewa Rp:</label><input type="number" id="kontrakan" value="0"></div>
                     <div class="input-group"><label>3. IPL Rp:</label><input type="number" id="ipl" value="0"></div>
                 </fieldset>
             </div>
             <div>
                 <fieldset>
-                    <legend>Alokasi Sisa</legend>
-                    <div class="input-group"><label>1. Harian (Live Saldo)</label><input type="text" id="alokasi_harian" readonly></div>
-                    <div class="input-group"><label>2. Darurat (30%)</label><input type="text" id="alokasi_darurat" readonly></div>
-                    <div class="input-group"><label>3. Refreshing (20%)</label><input type="text" id="alokasi_refreshing" readonly></div>
-                    <button class="action-btn" id="btn_hitung">Hitung & Simpan Base</button>
+                    <legend>Balance Allocation</legend>
+                    <div class="input-group"><label>1. Akumulasi Harian (50%/Live Balance)</label><input type="text" id="alokasi_harian" readonly></div>
+                    <div class="input-group"><label>2. Emergency Fund (30%)</label><input type="text" id="alokasi_darurat" readonly></div>
+                    <div class="input-group"><label>3. Refreshment Fund (20%)</label><input type="text" id="alokasi_refreshing" readonly></div>
+                    <button class="action-btn" id="btn_hitung">Hitung Alokasi Dana</button>
                 </fieldset>
             </div>
         </div>
@@ -180,8 +180,8 @@
                 <div>
                     <label>Jenis</label>
                     <select id="jenis_input">
-                        <option value="keluar">Pengeluaran (-)</option>
-                        <option value="masuk">Pemasukan Tambahan (+)</option>
+                        <option value="keluar">CashOut</option>
+                        <option value="masuk">CashIn</option>
                     </select>
                 </div>
             </div>
@@ -191,7 +191,7 @@
                     <input type="text" id="deskripsi_input">
                 </div>
                 <div>
-                    <label>Nominal Rp</label>
+                    <label>Nilai Rp</label>
                     <input type="number" id="nominal_input">
                 </div>
             </div>
@@ -511,7 +511,7 @@
       let ws = XLSX.utils.aoa_to_sheet(sheetData);
       let wb = XLSX.utils.book_new();
       XLSX.utils.book_append_sheet(wb, ws, "Rekap_Keuangan");
-      XLSX.writeFile(wb, `Rekap_Keuangan_Arinex_${currentPeriode.replace(' ', '_')}.xlsx`);
+      XLSX.writeFile(wb, `Rekap_Keuangan_${currentPeriode.replace(' ', '_')}.xlsx`);
   });
 </script>
 </body>
