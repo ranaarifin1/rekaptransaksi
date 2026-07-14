@@ -119,7 +119,7 @@
         <div class="user-avatar"></div>
         <div class="login-form">
             <h3 style="margin:0; text-shadow: 1px 1px #000;">User Login</h3>
-            <input type="email" id="login_email" placeholder="Email Firebase">
+            <input type="email" id="login_email" placeholder="Email">
             <input type="password" id="login_pass" placeholder="Password">
             <button class="login-btn-xp" id="btn_login">Log On</button>
         </div>
@@ -136,7 +136,7 @@
     <div class="content">
         <fieldset style="margin-bottom: 8px;">
             <legend>First Balance Deposit</legend>
-            <input type="number" id="total_pendapatan" placeholder="Masukkan total pendapatan">
+            <input type="number" id="total_pendapatan" placeholder="total pendapatan pertama">
         </fieldset>
 
         <div class="split-layout">
@@ -151,7 +151,7 @@
             <div>
                 <fieldset>
                     <legend>Balance Allocation</legend>
-                    <div class="input-group"><label>1. Akumulasi Harian (50%/Live Balance)</label><input type="text" id="alokasi_harian" readonly></div>
+                    <div class="input-group"><label>1. Daily Allocation (50%/Live Balance)</label><input type="text" id="alokasi_harian" readonly></div>
                     <div class="input-group"><label>2. Emergency Fund (30%)</label><input type="text" id="alokasi_darurat" readonly></div>
                     <div class="input-group"><label>3. Refreshment Fund (20%)</label><input type="text" id="alokasi_refreshing" readonly></div>
                     <button class="action-btn" id="btn_hitung">Hitung Alokasi Dana</button>
@@ -181,7 +181,7 @@
                     <label>Jenis</label>
                     <select id="jenis_input">
                         <option value="keluar">CashOut</option>
-                        <option value="masuk">CashIn</option>
+                        <option value="masuk">Cash In</option>
                     </select>
                 </div>
             </div>
@@ -201,7 +201,7 @@
         <fieldset style="margin-top: 10px;">
             <legend class="header-flex" style="width:100%;">
                 <span id="label_periode"></span>
-                <button class="btn-excel" id="btn_export_excel">Export to Excel</button>
+                <button class="btn-excel" id="btn_export_excel">Export Excel</button>
             </legend>
             <div class="rekap-container">
                 <table id="tabel_rekap">
@@ -217,7 +217,7 @@
                 </table>
             </div>
             <div class="summary-box" id="summary_bulanan">
-                Sisa Anggaran Harian Bulan Ini: Rp 0 <br>
+                Sisa Saldo Harian Bulan Ini: Rp 0 <br>
                 <span style="color: grey">Menunggu kalkulasi...</span>
             </div>
         </fieldset>
