@@ -6,7 +6,8 @@
     <title>ARINEX XP FINANCE MANAGER</title>
     <link rel="manifest" href="manifest.json">
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-    <script src="https://unpkg.com/xlsx-js-style/dist/xlsx.bundle.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/exceljs/dist/exceljs.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/file-saver/dist/FileSaver.min.js"></script>
     <style>
         /* UI/UX Windows XP Base */
         body {
@@ -500,150 +501,191 @@
   }
 
   // --- 5. EXPORT KE EXCEL ---
-  document.getElementById("btn_export_excel").addEventListener("click", () => {
+  
+document.getElementById("btn_export_excel").addEventListener("click", async () => {
 
-    if (Object.keys(rawDataForExcel).length === 0) {
-        showDialog("Export Excel", "Belum ada data transaksi.");
-        return;
-    }
+    const workbook = new ExcelJS.Workbook();
+    workbook.creator = "Arinex XP Finance";
+    workbook.created = new Date();
 
-    const wb = XLSX.utils.book_new();
+    const ws = workbook.addWorksheet("Laporan Keuangan");
 
-    // ===========================
-    // DASHBOARD
-    // ===========================
-
-    const totalPendapatan = Number(document.getElementById("total_pendapatan").value) || 0;
-    const cicilan = Number(document.getElementById("cicilan").value) || 0;
-    const kontrakan = Number(document.getElementById("kontrakan").value) || 0;
-    const ipl = Number(document.getElementById("ipl").value) || 0;
-    const pln = Number(document.getElementById("pln").value) || 0;
-    const internet = Number(document.getElementById("internet").value) || 0;
-    const konsumsi = Number(document.getElementById("konsumsi").value) || 0;
-
-    const totalFixed =
-        cicilan +
-        kontrakan +
-        ipl +
-        pln +
-        internet +
-        konsumsi;
-
-    const saldo =
-        (alokasiHarianBulanan + globalTotalMasuk) -
-        globalTotalKeluar;
-
-    const dashboard = [
-        ["ARINEX XP FINANCE MANAGER"],
-        ["Monthly Financial Report"],
-        [""],
-        ["Periode", currentPeriode],
-        [""],
-        ["RINGKASAN KEUANGAN"],
-        ["Total Pendapatan", totalPendapatan],
-        ["Pengeluaran Tetap", totalFixed],
-        ["Dana Harian", alokasiHarianBulanan],
-        ["Dana Darurat", totalPendapatan * 0.30],
-        ["Dana Refreshing", totalPendapatan * 0.20],
-        ["Cash In", globalTotalMasuk],
-        ["Cash Out", globalTotalKeluar],
-        ["Saldo Akhir", saldo]
+    // Lebar kolom
+    ws.columns = [
+        {width:12},
+        {width:35},
+        {width:15},
+        {width:18},
+        {width:18},
+        {width:18},
+        {width:18},
+        {width:18}
     ];
 
-    const wsDashboard = XLSX.utils.aoa_to_sheet(dashboard);
+    // ===== HEADER =====
 
-    wsDashboard["!merges"] = [
-        { s: { r:0,c:0 }, e:{ r:0,c:3 } },
-        { s: { r:1,c:0 }, e:{ r:1,c:3 } },
-        { s: { r:5,c:0 }, e:{ r:5,c:3 } }
-    ];
+    ws.mergeCells("A1:H1");
+    ws.getCell("A1").value = "ARINEX XP FINANCE MANAGER";
 
-    wsDashboard["!cols"] = [
-        {wch:30},
-        {wch:22},
-        {wch:22},
-        {wch:22}
-    ];
+    ws.getCell("A1").font = {
+        bold:true,
+        size:18,
+        color:{argb:"FFFFFFFF"}
+    };
 
-    XLSX.utils.book_append_sheet(wb, wsDashboard, "Dashboard");
+    ws.getCell("A1").alignment = {
+        horizontal:"center"
+    };
 
+    ws.getCell("A1").fill = {
+        type:"pattern",
+        pattern:"solid",
+        fgColor:{argb:"FF0058E6"}
+    };
 
-    // ===========================
-    // REKAP TRANSAKSI
-    // ===========================
+    ws.mergeCells("A2:H2");
+    ws.getCell("A2").value="Monthly Financial Report";
+    ws.getCell("A2").alignment={horizontal:"center"};
 
-    let transaksi = [[
+    ws.addRow([]);
+
+    // Dashboard
+
+    ws.addRow(["Periode",currentPeriode]);
+    ws.addRow(["Total Pendapatan",Number(document.getElementById("total_pendapatan").value)]);
+    ws.addRow(["Cash In",globalTotalMasuk]);
+    ws.addRow(["Cash Out",globalTotalKeluar]);
+
+    const saldo=(alokasiHarianBulanan+globalTotalMasuk)-globalTotalKeluar;
+
+    ws.addRow(["Saldo Akhir",saldo]);
+
+    ws.addRow([]);
+
+    // Header transaksi
+
+    let row=ws.addRow([
         "Tanggal",
         "Deskripsi",
         "Jenis",
         "Nominal",
         "Batas Harian",
-        "Total Keluar",
-        "Saldo Hari",
+        "Keluar",
+        "Saldo",
         "Status"
-    ]];
+    ]);
 
-    const sortedDates = Object.keys(rawDataForExcel)
-        .sort((a,b)=>Number(a)-Number(b));
+    row.eachCell(cell=>{
+        cell.font={
+            bold:true,
+            color:{argb:"FFFFFFFF"}
+        };
 
-    sortedDates.forEach(tgl=>{
+        cell.fill={
+            type:"pattern",
+            pattern:"solid",
+            fgColor:{argb:"FF0058E6"}
+        };
 
-        const day = rawDataForExcel[tgl];
+        cell.border={
+            top:{style:"thin"},
+            left:{style:"thin"},
+            bottom:{style:"thin"},
+            right:{style:"thin"}
+        };
 
-        const saldoHari =
-            batasHarianEfektif -
-            day.totKeluar;
+        cell.alignment={
+            horizontal:"center"
+        };
+    });
 
-        const status =
-            saldoHari < 0 ?
-            "OVER BUDGET" :
-            saldoHari < batasHarianEfektif*0.2 ?
-            "HAMPIR BATAS" :
-            "AMAN";
+    Object.keys(rawDataForExcel)
+    .sort((a,b)=>Number(a)-Number(b))
+    .forEach(tgl=>{
 
-        day.items.forEach(item=>{
+        const d=rawDataForExcel[tgl];
 
-            transaksi.push([
+        const saldoHari=batasHarianEfektif-d.totKeluar;
+
+        let status="AMAN";
+
+        if(saldoHari<0)
+            status="OVER BUDGET";
+        else if(saldoHari<(batasHarianEfektif*0.2))
+            status="HAMPIR BATAS";
+
+        d.items.forEach(item=>{
+
+            let r=ws.addRow([
                 tgl,
                 item.deskripsi,
                 item.jenis,
                 item.nominal,
                 batasHarianEfektif,
-                day.totKeluar,
+                d.totKeluar,
                 saldoHari,
                 status
             ]);
+
+            r.eachCell(c=>{
+                c.border={
+                    top:{style:"thin"},
+                    left:{style:"thin"},
+                    bottom:{style:"thin"},
+                    right:{style:"thin"}
+                };
+            });
+
+            if(status=="AMAN"){
+
+                r.getCell(8).fill={
+                    type:"pattern",
+                    pattern:"solid",
+                    fgColor:{argb:"FFC6EFCE"}
+                };
+
+            }
+
+            if(status=="HAMPIR BATAS"){
+
+                r.getCell(8).fill={
+                    type:"pattern",
+                    pattern:"solid",
+                    fgColor:{argb:"FFFFEB9C"}
+                };
+
+            }
+
+            if(status=="OVER BUDGET"){
+
+                r.getCell(8).fill={
+                    type:"pattern",
+                    pattern:"solid",
+                    fgColor:{argb:"FFFFC7CE"}
+                };
+
+            }
 
         });
 
     });
 
-    const ws = XLSX.utils.aoa_to_sheet(transaksi);
-
-    ws["!cols"]=[
-        {wch:10},
-        {wch:35},
-        {wch:12},
-        {wch:15},
-        {wch:18},
-        {wch:18},
-        {wch:18},
-        {wch:18}
+    ws.views=[
+        {
+            state:"frozen",
+            ySplit:8
+        }
     ];
 
-    XLSX.utils.book_append_sheet(wb,ws,"Rekap");
+    const buffer=await workbook.xlsx.writeBuffer();
 
-    XLSX.writeFile(
-        wb,
-        "ARINEX_FINANCE_"+currentPeriode.replace(" ","_")+".xlsx"
-    );
-
-    showDialog(
-        "Export Berhasil",
-        "Laporan berhasil disimpan."
+    saveAs(
+        new Blob([buffer]),
+        "ARINEX_FINANCE_"+currentPeriode+".xlsx"
     );
 
 });
+    
 </script>
 </body>
   </html>
