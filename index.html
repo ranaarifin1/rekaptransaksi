@@ -143,9 +143,12 @@
             <div>
                 <fieldset>
                     <legend>Pengeluaran Fixed</legend>
-                    <div class="input-group"><label>1. Cicilan Rp:</label><input type="number" id="cicilan" value="0"></div>
-                    <div class="input-group"><label>2. Sewa Rp:</label><input type="number" id="kontrakan" value="0"></div>
-                    <div class="input-group"><label>3. IPL Rp:</label><input type="number" id="ipl" value="0"></div>
+                    <div class="input-group"><label>1. Cicilan Rp:</label><input type="number" id="cicilan" value=""></div>
+                    <div class="input-group"><label>2. Sewa Rp:</label><input type="number" id="kontrakan" value=""></div>
+                    <div class="input-group"><label>3. IPL Rp:</label><input type="number" id="ipl" value=""></div>
+                    <div class="input-group"><label>3. PLN Rp:</label><input type="number" id="ipl" value=""></div>
+                    <div class="input-group"><label>3. Internet Rp:</label><input type="number" id="ipl" value=""></div>
+                    <div class="input-group"><label>3. Konsumsi Rp:</label><input type="number" id="ipl" value=""></div>
                 </fieldset>
             </div>
             <div>
@@ -344,15 +347,21 @@
       const c = Number(document.getElementById('cicilan').value) || 0;
       const k = Number(document.getElementById('kontrakan').value) || 0;
       const i = Number(document.getElementById('ipl').value) || 0;
+      const i = Number(document.getElementById('pln').value) || 0;
+      const i = Number(document.getElementById('internet').value) || 0;
+      const i = Number(document.getElementById('konsumsi').value) || 0;
 
-      const sisa = p - (c + k + i);
+
+
+
+      const sisa = p - (c + k + i + pln +int+kon);
       if (sisa < 0) return showDialog("Peringatan", "Pendapatan tidak cukup!");
 
       const harian = sisa * 0.50;
       const batas = Math.floor(harian / daysInMonth);
 
       set(ref(db, 'alokasi_keuangan'), {
-          pendapatan: p, cicilan: c, kontrakan: k, ipl: i, 
+          pendapatan: p, cicilan: c, kontrakan: k, ipl: i, pln: pln, internet: int , konsumsi:kon,
           harian: harian, darurat: sisa*0.30, refreshing: sisa*0.20, batasHarian: batas
       }).then(() => showDialog("Sukses", "Base Alokasi diperbarui."));
   });
@@ -365,6 +374,9 @@
               document.getElementById('cicilan').value = data.cicilan;
               document.getElementById('kontrakan').value = data.kontrakan;
               document.getElementById('ipl').value = data.ipl;
+              document.getElementById('pln').value = data.pln;
+              document.getElementById('internet').value = data.internet;
+              document.getElementById('konsumsi').value = data.konsumsi;
               
               document.getElementById('alokasi_darurat').value = formatRp(data.darurat);
               document.getElementById('alokasi_refreshing').value = formatRp(data.refreshing);
