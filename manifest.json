@@ -1,0 +1,21 @@
+{
+  "name": "Arinex XP Finance",
+  "short_name": "XP Finance",
+  "start_url": "./index.html",
+  "display": "fullscreen",
+  "background_color": "#0058e6",
+  "theme_color": "#0058e6",
+  "orientation": "portrait",
+  "icons": [
+    {
+      "src": "logo.png",
+      "sizes": "192x192",
+      "type": "image/png"
+    },
+    {
+      "src": "logo2.png",
+      "sizes": "512x512",
+      "type": "image/png"
+    }
+  ]
+}
