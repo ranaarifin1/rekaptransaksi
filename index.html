@@ -6,8 +6,7 @@
     <title>ARINEX XP FINANCE MANAGER</title>
     <link rel="manifest" href="manifest.json">
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-  <script src="https://cdn.jsdelivr.net/npm/exceljs/dist/exceljs.min.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/file-saver/dist/FileSaver.min.js"></script>
+    <script src="https://unpkg.com/xlsx-js-style/dist/xlsx.bundle.js"></script>
     <style>
         /* UI/UX Windows XP Base */
         body {
@@ -281,7 +280,6 @@
   };
   const formatRp = (num) => "Rp " + num.toLocaleString('id-ID');
 
-  // --- FUNGSI UPDATE SALDO LIVE (SUDAH DIPERBAIKI BUG-NYA) ---
   function updateSaldoLive() {
       const saldoRealTime = (alokasiHarianBulanan + globalTotalMasuk) - globalTotalKeluar;
       const elAlokasi = document.getElementById('alokasi_harian');
@@ -324,7 +322,7 @@
   });
   document.getElementById('btn_logout').addEventListener('click', () => signOut(auth));
 
-  // --- 2. CHART.JS (DIUBAH MENJADI MURNI LINE CHART) ---
+  // --- 2. CHART.JS ---
   Chart.defaults.color = '#aaaaaa';
   Chart.defaults.borderColor = '#333333';
   const ctx = document.getElementById('financeChart').getContext('2d');
@@ -351,9 +349,6 @@
       const pln = Number(document.getElementById('pln').value) || 0;
       const int = Number(document.getElementById('internet').value) || 0;
       const kon = Number(document.getElementById('konsumsi').value) || 0;
-
-
-
 
       const sisa = p - (c + k + i + pln +int+kon);
       if (sisa < 0) return showDialog("Peringatan", "Pendapatan tidak cukup!");
@@ -500,192 +495,209 @@
       });
   }
 
-  // --- 5. EXPORT KE EXCEL ---
-  
-document.getElementById("btn_export_excel").addEventListener("click", async () => {
+  // --- 5. EXPORT KE EXCEL (UPDATED WITH PROFESSIONAL TEMPLATE) ---
+  document.getElementById("btn_export_excel").addEventListener("click", () => {
+    if (Object.keys(rawDataForExcel).length === 0) {
+        showDialog("Export Excel", "Belum ada data transaksi.");
+        return;
+    }
 
-    const workbook = new ExcelJS.Workbook();
-    workbook.creator = "Arinex XP Finance";
-    workbook.created = new Date();
+    const wb = XLSX.utils.book_new();
 
-    const ws = workbook.addWorksheet("Laporan Keuangan");
+    // Data dari Form HTML
+    const totalPendapatan = Number(document.getElementById("total_pendapatan").value) || 0;
+    const cicilan = Number(document.getElementById("cicilan").value) || 0;
+    const kontrakan = Number(document.getElementById("kontrakan").value) || 0;
+    const ipl = Number(document.getElementById("ipl").value) || 0;
+    const pln = Number(document.getElementById("pln").value) || 0;
+    const internet = Number(document.getElementById("internet").value) || 0;
+    const konsumsi = Number(document.getElementById("konsumsi").value) || 0;
 
-    // Lebar kolom
-    ws.columns = [
-        {width:12},
-        {width:35},
-        {width:15},
-        {width:18},
-        {width:18},
-        {width:18},
-        {width:18},
-        {width:18}
-    ];
+    const totalFixed = cicilan + kontrakan + ipl + pln + internet + konsumsi;
+    const sisaPendapatan = totalPendapatan - totalFixed;
+    const saldoAkhir = (alokasiHarianBulanan + globalTotalMasuk) - globalTotalKeluar;
 
-    // ===== HEADER =====
-
-    ws.mergeCells("A1:H1");
-    ws.getCell("A1").value = "ARINEX XP FINANCE MANAGER";
-
-    ws.getCell("A1").font = {
-        bold:true,
-        size:18,
-        color:{argb:"FFFFFFFF"}
+    // Helper Styling Dasar untuk xlsx-js-style
+    const borderStyle = {
+        top: { style: "thin", color: { rgb: "ACA899" } },
+        bottom: { style: "thin", color: { rgb: "ACA899" } },
+        left: { style: "thin", color: { rgb: "ACA899" } },
+        right: { style: "thin", color: { rgb: "ACA899" } }
+    };
+    const headerStyle = { 
+        font: { name: "Tahoma", sz: 11, bold: true, color: { rgb: "FFFFFF" } }, 
+        fill: { fgColor: { rgb: "003399" } }, 
+        alignment: { horizontal: "center", vertical: "center" }, 
+        border: borderStyle 
     };
 
-    ws.getCell("A1").alignment = {
-        horizontal:"center"
-    };
-
-    ws.getCell("A1").fill = {
-        type:"pattern",
-        pattern:"solid",
-        fgColor:{argb:"FF0058E6"}
-    };
-
-    ws.mergeCells("A2:H2");
-    ws.getCell("A2").value="Monthly Financial Report";
-    ws.getCell("A2").alignment={horizontal:"center"};
-
-    ws.addRow([]);
-
-    // Dashboard
-
-    ws.addRow(["Periode",currentPeriode]);
-    ws.addRow(["Total Pendapatan",Number(document.getElementById("total_pendapatan").value)]);
-    ws.addRow(["Cash In",globalTotalMasuk]);
-    ws.addRow(["Cash Out",globalTotalKeluar]);
-
-    const saldo=(alokasiHarianBulanan+globalTotalMasuk)-globalTotalKeluar;
-
-    ws.addRow(["Saldo Akhir",saldo]);
-
-    ws.addRow([]);
-
-    // Header transaksi
-
-    let row=ws.addRow([
-        "Tanggal",
-        "Deskripsi",
-        "Jenis",
-        "Nominal",
-        "Batas Harian",
-        "Keluar",
-        "Saldo",
-        "Status"
+    // ===========================
+    // SHEET 1: SETUP & FIXED COSTS
+    // ===========================
+    const wsSetup = XLSX.utils.aoa_to_sheet([
+        ["Parameter", "Nilai (Rp)"],
+        ["Total Pendapatan Pertama", totalPendapatan],
+        ["Pengeluaran Fixed:", ""],
+        ["1. Cicilan", cicilan],
+        ["2. Sewa/Kontrakan", kontrakan],
+        ["3. IPL", ipl],
+        ["4. PLN", pln],
+        ["5. Internet", internet],
+        ["6. Konsumsi", konsumsi],
+        ["Total Fixed", totalFixed]
     ]);
+    wsSetup["!cols"] = [{wch: 30}, {wch: 20}];
 
-    row.eachCell(cell=>{
-        cell.font={
-            bold:true,
-            color:{argb:"FFFFFFFF"}
-        };
+    for (let cell in wsSetup) {
+        if (cell[0] === '!') continue;
+        const c = wsSetup[cell];
+        const rowNum = parseInt(cell.replace(/[A-Z]/g, ''));
+        const colStr = cell.replace(/[0-9]/g, '');
+        
+        c.s = { font: { name: "Tahoma", sz: 11 }, border: borderStyle };
+        if (colStr === 'B' && typeof c.v === 'number') c.z = '"Rp "#,##0';
+        if (rowNum === 1) c.s = headerStyle;
+        if (c.v && String(c.v).includes("Total")) {
+            c.s.font.bold = true;
+            c.s.fill = { fgColor: { rgb: "ECE9D8" } }; // Warna aksen XP 
+        }
+    }
 
-        cell.fill={
-            type:"pattern",
-            pattern:"solid",
-            fgColor:{argb:"FF0058E6"}
-        };
+    // ===========================
+    // SHEET 2: DASHBOARD
+    // ===========================
+    const wsDashboard = XLSX.utils.aoa_to_sheet([
+        ["ARINEX XP FINANCE MANAGER", "", "", ""],
+        ["Monthly Financial Report - " + currentPeriode, "", "", ""],
+        ["", "", "", ""],
+        ["RINGKASAN ALOKASI", "", "RINGKASAN REALISASI", ""],
+        ["Total Pendapatan", totalPendapatan, "Total Cash In", globalTotalMasuk],
+        ["Total Pengeluaran Tetap", totalFixed, "Total Cash Out (Harian)", globalTotalKeluar],
+        ["Dana Harian (50%)", alokasiHarianBulanan, "Sisa Saldo Harian Berjalan", saldoAkhir],
+        ["Dana Darurat (30%)", sisaPendapatan * 0.30, "Batas Harian Efektif", batasHarianEfektif],
+        ["Dana Refreshing (20%)", sisaPendapatan * 0.20, "", ""]
+    ]);
+    
+    wsDashboard["!merges"] = [
+        { s: { r:0, c:0 }, e:{ r:0, c:3 } },
+        { s: { r:1, c:0 }, e:{ r:1, c:3 } }
+    ];
+    wsDashboard["!cols"] = [{wch:25}, {wch:22}, {wch:25}, {wch:22}];
+    
+    for (let cell in wsDashboard) {
+        if (cell[0] === '!') continue;
+        const c = wsDashboard[cell];
+        const rowNum = parseInt(cell.replace(/[A-Z]/g, ''));
+        const colStr = cell.replace(/[0-9]/g, '');
+        
+        c.s = { font: { name: "Tahoma", sz: 11 }, border: borderStyle };
+        
+        if (typeof c.v === 'number') {
+            c.z = '"Rp "#,##0';
+            c.s.alignment = { horizontal: "right" };
+        }
+        if (rowNum === 1) {
+            c.s = { font: { name: "Tahoma", sz: 16, bold: true, color: { rgb: "FFFFFF" } }, fill: { fgColor: { rgb: "003399" } }, alignment: { horizontal: "center", vertical: "center" }, border: borderStyle };
+        }
+        if (rowNum === 2) {
+            c.s = { font: { name: "Tahoma", sz: 12, italic: true, color: { rgb: "FFCC00" } }, fill: { fgColor: { rgb: "005CE6" } }, alignment: { horizontal: "center", vertical: "center" }, border: borderStyle };
+        }
+        if (rowNum === 4) c.s = headerStyle;
+        if (rowNum > 4 && (colStr === 'A' || colStr === 'C')) {
+            c.s.font.bold = true;
+            c.s.fill = { fgColor: { rgb: "ECE9D8" } };
+        }
+        // Kondisional Warna Saldo di D7
+        if (cell === 'D7') {
+             if (saldoAkhir >= 0) {
+                 c.s.fill = { fgColor: { rgb: "D4FCD4" } };
+                 c.s.font = { name: "Tahoma", sz: 11, bold: true, color: { rgb: "008000" } };
+             } else {
+                 c.s.fill = { fgColor: { rgb: "FFE6E6" } };
+                 c.s.font = { name: "Tahoma", sz: 11, bold: true, color: { rgb: "FF0000" } };
+             }
+        }
+    }
 
-        cell.border={
-            top:{style:"thin"},
-            left:{style:"thin"},
-            bottom:{style:"thin"},
-            right:{style:"thin"}
-        };
-
-        cell.alignment={
-            horizontal:"center"
-        };
-    });
-
-    Object.keys(rawDataForExcel)
-    .sort((a,b)=>Number(a)-Number(b))
-    .forEach(tgl=>{
-
-        const d=rawDataForExcel[tgl];
-
-        const saldoHari=batasHarianEfektif-d.totKeluar;
-
-        let status="AMAN";
-
-        if(saldoHari<0)
-            status="OVER BUDGET";
-        else if(saldoHari<(batasHarianEfektif*0.2))
-            status="HAMPIR BATAS";
-
-        d.items.forEach(item=>{
-
-            let r=ws.addRow([
-                tgl,
+    // ===========================
+    // SHEET 3: REKAP TRANSAKSI
+    // ===========================
+    let rekapAOA = [
+        ["Tanggal", "Deskripsi", "Jenis", "Nominal", "Batas Harian", "Total Keluar Hari Ini", "Sisa Saldo Harian", "Status"]
+    ];
+    
+    const sortedDates = Object.keys(rawDataForExcel).sort((a,b)=>Number(a)-Number(b));
+    sortedDates.forEach(tgl => {
+        const day = rawDataForExcel[tgl];
+        const saldoHari = batasHarianEfektif - day.totKeluar;
+        
+        let status = "AMAN";
+        if (saldoHari < 0) status = "OVER BUDGET";
+        else if (saldoHari < batasHarianEfektif * 0.2) status = "HAMPIR BATAS";
+        
+        day.items.forEach(item => {
+            rekapAOA.push([
+                `${tgl} ${currentPeriode}`,
                 item.deskripsi,
                 item.jenis,
                 item.nominal,
                 batasHarianEfektif,
-                d.totKeluar,
+                day.totKeluar,
                 saldoHari,
                 status
             ]);
-
-            r.eachCell(c=>{
-                c.border={
-                    top:{style:"thin"},
-                    left:{style:"thin"},
-                    bottom:{style:"thin"},
-                    right:{style:"thin"}
-                };
-            });
-
-            if(status=="AMAN"){
-
-                r.getCell(8).fill={
-                    type:"pattern",
-                    pattern:"solid",
-                    fgColor:{argb:"FFC6EFCE"}
-                };
-
-            }
-
-            if(status=="HAMPIR BATAS"){
-
-                r.getCell(8).fill={
-                    type:"pattern",
-                    pattern:"solid",
-                    fgColor:{argb:"FFFFEB9C"}
-                };
-
-            }
-
-            if(status=="OVER BUDGET"){
-
-                r.getCell(8).fill={
-                    type:"pattern",
-                    pattern:"solid",
-                    fgColor:{argb:"FFFFC7CE"}
-                };
-
-            }
-
         });
-
     });
-
-    ws.views=[
-        {
-            state:"frozen",
-            ySplit:8
-        }
-    ];
-
-    const buffer=await workbook.xlsx.writeBuffer();
-
-    saveAs(
-        new Blob([buffer]),
-        "ARINEX_FINANCE_"+currentPeriode+".xlsx"
-    );
-
-});
     
+    const wsRekap = XLSX.utils.aoa_to_sheet(rekapAOA);
+    wsRekap["!cols"] = [{wch:18}, {wch:35}, {wch:12}, {wch:15}, {wch:18}, {wch:22}, {wch:20}, {wch:15}];
+    
+    for (let cell in wsRekap) {
+        if (cell[0] === '!') continue;
+        const c = wsRekap[cell];
+        const rowNum = parseInt(cell.replace(/[A-Z]/g, ''));
+        const colStr = cell.replace(/[0-9]/g, '');
+        
+        c.s = { font: { name: "Tahoma", sz: 11 }, border: borderStyle };
+        
+        if (rowNum === 1) {
+            c.s = headerStyle;
+        } else {
+            if (['D','E','F','G'].includes(colStr) && typeof c.v === 'number') {
+                c.z = '"Rp "#,##0'; // Format Rupiah
+            }
+            if (colStr === 'C') { // Kolom Jenis
+                 c.s.alignment = { horizontal: "center" };
+                 c.s.font.bold = true;
+                 if (c.v === 'masuk') c.s.font.color = { rgb: "008000" };
+                 else c.s.font.color = { rgb: "880000" };
+            }
+            if (colStr === 'H') { // Kolom Status
+                 c.s.alignment = { horizontal: "center" };
+                 c.s.font.bold = true;
+                 if (c.v === 'OVER BUDGET') {
+                     c.s.fill = { fgColor: { rgb: "FFE6E6" } };
+                     c.s.font.color = { rgb: "FF0000" };
+                 } else if (c.v === 'HAMPIR BATAS') {
+                     c.s.fill = { fgColor: { rgb: "FFF3CD" } };
+                     c.s.font.color = { rgb: "FF9900" };
+                 } else {
+                     c.s.fill = { fgColor: { rgb: "D4FCD4" } };
+                     c.s.font.color = { rgb: "008000" };
+                 }
+            }
+        }
+    }
+    wsRekap["!autofilter"] = { ref: wsRekap["!ref"] }; // Mengaktifkan Filter pada Tabel Excel
+
+    XLSX.utils.book_append_sheet(wb, wsSetup, "Setup");
+    XLSX.utils.book_append_sheet(wb, wsDashboard, "Dashboard");
+    XLSX.utils.book_append_sheet(wb, wsRekap, "Rekap Transaksi");
+
+    XLSX.writeFile(wb, "ARINEX_FINANCE_" + currentPeriode.replace(" ", "_") + ".xlsx");
+    showDialog("Export Berhasil", "Laporan berhasil diunduh dengan format terbarui!");
+  });
 </script>
 </body>
-  </html>
+</html>
+
