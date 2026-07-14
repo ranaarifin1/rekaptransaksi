@@ -500,31 +500,150 @@
   }
 
   // --- 5. EXPORT KE EXCEL ---
-  document.getElementById('btn_export_excel').addEventListener('click', () => {
-      if (Object.keys(rawDataForExcel).length === 0) return showDialog("Gagal", "Tidak ada data untuk diexport bulan ini.");
+  document.getElementById("btn_export_excel").addEventListener("click", () => {
 
-      let sheetData = [['Tanggal', 'Deskripsi', 'Jenis', 'Nominal (Rp)', 'Batas Harian Efektif (Rp)', 'Total Pengeluaran (Rp)', 'Sisa Saldo Harian (Rp)', 'Status Harian']];
-      const sortedDates = Object.keys(rawDataForExcel).sort((a,b) => Number(a) - Number(b));
+    if (Object.keys(rawDataForExcel).length === 0) {
+        showDialog("Export Excel", "Belum ada data transaksi.");
+        return;
+    }
 
-      sortedDates.forEach(tgl => {
-          const dayData = rawDataForExcel[tgl];
-          const sisaSaldoHariIni = batasHarianEfektif - dayData.totKeluar;
-          const statusHariIni = sisaSaldoHariIni < 0 ? 'Melebihi Batas' : 'OK';
+    const wb = XLSX.utils.book_new();
 
-          dayData.items.forEach((item, index) => {
-              if (index === 0) {
-                  sheetData.push([tgl, item.deskripsi, item.jenis, item.nominal, batasHarianEfektif, dayData.totKeluar, sisaSaldoHariIni, statusHariIni]);
-              } else {
-                  sheetData.push([tgl, item.deskripsi, item.jenis, item.nominal, '', '', '', '']);
-              }
-          });
-      });
+    // ===========================
+    // DASHBOARD
+    // ===========================
 
-      let ws = XLSX.utils.aoa_to_sheet(sheetData);
-      let wb = XLSX.utils.book_new();
-      XLSX.utils.book_append_sheet(wb, ws, "Rekap_Keuangan");
-      XLSX.writeFile(wb, `Rekap_Keuangan_${currentPeriode.replace(' ', '_')}.xlsx`);
-  });
+    const totalPendapatan = Number(document.getElementById("total_pendapatan").value) || 0;
+    const cicilan = Number(document.getElementById("cicilan").value) || 0;
+    const kontrakan = Number(document.getElementById("kontrakan").value) || 0;
+    const ipl = Number(document.getElementById("ipl").value) || 0;
+    const pln = Number(document.getElementById("pln").value) || 0;
+    const internet = Number(document.getElementById("internet").value) || 0;
+    const konsumsi = Number(document.getElementById("konsumsi").value) || 0;
+
+    const totalFixed =
+        cicilan +
+        kontrakan +
+        ipl +
+        pln +
+        internet +
+        konsumsi;
+
+    const saldo =
+        (alokasiHarianBulanan + globalTotalMasuk) -
+        globalTotalKeluar;
+
+    const dashboard = [
+        ["ARINEX XP FINANCE MANAGER"],
+        ["Monthly Financial Report"],
+        [""],
+        ["Periode", currentPeriode],
+        [""],
+        ["RINGKASAN KEUANGAN"],
+        ["Total Pendapatan", totalPendapatan],
+        ["Pengeluaran Tetap", totalFixed],
+        ["Dana Harian", alokasiHarianBulanan],
+        ["Dana Darurat", totalPendapatan * 0.30],
+        ["Dana Refreshing", totalPendapatan * 0.20],
+        ["Cash In", globalTotalMasuk],
+        ["Cash Out", globalTotalKeluar],
+        ["Saldo Akhir", saldo]
+    ];
+
+    const wsDashboard = XLSX.utils.aoa_to_sheet(dashboard);
+
+    wsDashboard["!merges"] = [
+        { s: { r:0,c:0 }, e:{ r:0,c:3 } },
+        { s: { r:1,c:0 }, e:{ r:1,c:3 } },
+        { s: { r:5,c:0 }, e:{ r:5,c:3 } }
+    ];
+
+    wsDashboard["!cols"] = [
+        {wch:30},
+        {wch:22},
+        {wch:22},
+        {wch:22}
+    ];
+
+    XLSX.utils.book_append_sheet(wb, wsDashboard, "Dashboard");
+
+
+    // ===========================
+    // REKAP TRANSAKSI
+    // ===========================
+
+    let transaksi = [[
+        "Tanggal",
+        "Deskripsi",
+        "Jenis",
+        "Nominal",
+        "Batas Harian",
+        "Total Keluar",
+        "Saldo Hari",
+        "Status"
+    ]];
+
+    const sortedDates = Object.keys(rawDataForExcel)
+        .sort((a,b)=>Number(a)-Number(b));
+
+    sortedDates.forEach(tgl=>{
+
+        const day = rawDataForExcel[tgl];
+
+        const saldoHari =
+            batasHarianEfektif -
+            day.totKeluar;
+
+        const status =
+            saldoHari < 0 ?
+            "OVER BUDGET" :
+            saldoHari < batasHarianEfektif*0.2 ?
+            "HAMPIR BATAS" :
+            "AMAN";
+
+        day.items.forEach(item=>{
+
+            transaksi.push([
+                tgl,
+                item.deskripsi,
+                item.jenis,
+                item.nominal,
+                batasHarianEfektif,
+                day.totKeluar,
+                saldoHari,
+                status
+            ]);
+
+        });
+
+    });
+
+    const ws = XLSX.utils.aoa_to_sheet(transaksi);
+
+    ws["!cols"]=[
+        {wch:10},
+        {wch:35},
+        {wch:12},
+        {wch:15},
+        {wch:18},
+        {wch:18},
+        {wch:18},
+        {wch:18}
+    ];
+
+    XLSX.utils.book_append_sheet(wb,ws,"Rekap");
+
+    XLSX.writeFile(
+        wb,
+        "ARINEX_FINANCE_"+currentPeriode.replace(" ","_")+".xlsx"
+    );
+
+    showDialog(
+        "Export Berhasil",
+        "Laporan berhasil disimpan."
+    );
+
+});
 </script>
 </body>
   </html>
