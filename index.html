@@ -1,0 +1,518 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>XP Finance Manager</title>
+    <link rel="manifest" href="manifest.json">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+    <style>
+        /* UI/UX Windows XP Base */
+        body {
+            margin: 0; padding: 0; font-family: Tahoma, "Trebuchet MS", sans-serif;
+            background-color: #000; height: 100vh; overflow: hidden;
+            display: flex; justify-content: center; align-items: center;
+        }
+        
+        #login_screen {
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            background: #003399; z-index: 1000; display: flex; flex-direction: column;
+            justify-content: center; align-items: center; color: white;
+        }
+        .login-band {
+            width: 100%; background: linear-gradient(to bottom, #004ecc, #003399 20%, #002266);
+            border-top: 2px solid #005ce6; border-bottom: 2px solid #001a4d;
+            padding: 30px 20px; display: flex; justify-content: center; align-items: center; gap: 20px;
+        }
+        .user-avatar {
+            width: 60px; height: 60px; background: #fff; border: 2px solid #fff; border-radius: 5px;
+            background-image: url('https://cdn-icons-png.flaticon.com/512/149/149071.png');
+            background-size: cover; box-shadow: 2px 2px 5px rgba(0,0,0,0.5);
+        }
+        .login-form { display: flex; flex-direction: column; gap: 5px; }
+        .login-form input { padding: 5px; font-family: Tahoma; border: 2px inset #fff; font-size: 14px; }
+        .login-btn-xp { background: #4caf50; border: 1px solid #fff; color: white; font-weight: bold; padding: 5px 15px; cursor: pointer; border-radius: 3px; font-size: 12px; }
+
+        .xp-window {
+            width: 100%; height: 100%; max-width: 600px;
+            background: #ece9d8; display: none; flex-direction: column;
+            border: inset 2px #fff; box-sizing: border-box;
+        }
+        .title-bar {
+            background: linear-gradient(to right, #0058e6, #3a93ff, #0058e6);
+            color: white; padding: 6px 8px; font-weight: bold; font-size: 14px;
+            display: flex; justify-content: space-between; align-items: center; text-shadow: 1px 1px #000; flex-shrink: 0;
+        }
+        .title-bar-btns span {
+            display: inline-block; padding: 0 5px; height: 18px; 
+            background: #c8413b; border: 1px solid #fff; border-radius: 3px;
+            text-align: center; line-height: 16px; font-size: 11px; cursor: pointer; box-shadow: inset 1px 1px #ff9e99;
+        }
+        
+        .content { padding: 8px; overflow-y: auto; flex-grow: 1; font-size: 12px; }
+        .split-layout { display: flex; gap: 8px; margin-bottom: 10px; }
+        .split-layout > div { flex: 1; }
+        
+        fieldset { border: 1px solid #aca899; border-radius: 4px; padding: 8px; margin: 0; background: #fbfbf9; }
+        legend { color: #0054e3; font-weight: bold; }
+        
+        .input-group { margin-bottom: 6px; }
+        .input-group label { display: block; margin-bottom: 2px; }
+        input[type="number"], input[type="text"], select {
+            width: 100%; padding: 4px; border: 2px inset #fff; box-sizing: border-box;
+            background: #fff; font-family: Tahoma; font-size: 12px;
+        }
+        input[readonly] { background: #e0e0e0; color: #555; font-weight: bold; }
+        
+        /* Highlight khusus untuk input Saldo Realtime */
+        input#alokasi_harian { background: #d4fcd4; color: #006600; font-size: 13px; }
+        
+        button.action-btn {
+            background: linear-gradient(to bottom, #f4f3ee, #eae8e3);
+            border: 1px solid #003c74; border-radius: 3px; padding: 6px 10px;
+            font-family: Tahoma; font-size: 12px; cursor: pointer; width: 100%; margin-top: 5px; box-shadow: inset 1px 1px #fff;
+        }
+        button.action-btn:active { background: #dcd9d3; border: 1px inset #003c74; box-shadow: none; }
+        
+        .dark-chart-container {
+            background: #121212; border: 2px inset #555; border-radius: 3px;
+            padding: 5px; margin-top: 10px; height: 180px; width: 100%; box-sizing: border-box; position: relative;
+        }
+
+        .rekap-container { margin-top: 5px; background: #fff; border: 2px inset #fff; max-height: 250px; overflow-y: auto; }
+        table { width: 100%; border-collapse: collapse; font-size: 11px; }
+        th, td { border: 1px solid #aca899; padding: 5px; text-align: left; }
+        th { background: #ece9d8; position: sticky; top: 0; z-index: 10; border-bottom: 2px solid #aca899; }
+        .center { text-align: center; vertical-align: middle; }
+        
+        .status-ok { color: #008000; font-weight: bold; }
+        .status-bad { color: #ff0000; font-weight: bold; }
+        .text-masuk { color: #008000; font-weight: bold; }
+        .text-keluar { color: #880000; }
+        
+        .summary-box {
+            margin-top: 10px; padding: 10px; border: 1px solid #aca899; background: #ffffcc;
+            font-weight: bold; text-align: center;
+        }
+
+        .xp-overlay {
+            position: fixed; top: 0; left: 0; right: 0; bottom: 0;
+            background: rgba(0,0,0,0.5); display: none; justify-content: center; align-items: center; z-index: 999;
+        }
+        .xp-dialog { width: 280px; background: #ece9d8; border: 2px inset #fff; display: flex; flex-direction: column; }
+        .xp-dialog .title { background: linear-gradient(to right, #0058e6, #3a93ff); color: white; padding: 4px; font-weight: bold; font-size:12px; }
+        .xp-dialog .body { padding: 15px; text-align: center; font-size:12px;}
+        .xp-dialog button { width: 80px; margin: 0 auto; display: block; }
+        
+        .header-flex { display: flex; justify-content: space-between; align-items: center; }
+        .btn-excel { background: #217346; color: white; border: 1px solid #fff; font-size: 10px; padding: 3px 8px; border-radius: 3px; cursor: pointer; }
+    </style>
+</head>
+<body>
+
+<div id="login_screen">
+    <div style="margin-bottom: 20px; font-size: 24px; font-style: italic; font-weight: bold; text-shadow: 2px 2px #000;">
+        Windows XP <span style="color:#ff9900">Finance</span>
+    </div>
+    <div class="login-band">
+        <div class="user-avatar"></div>
+        <div class="login-form">
+            <h3 style="margin:0; text-shadow: 1px 1px #000;">Administrator</h3>
+            <input type="email" id="login_email" placeholder="Email Firebase">
+            <input type="password" id="login_pass" placeholder="Password">
+            <button class="login-btn-xp" id="btn_login">Log On</button>
+        </div>
+    </div>
+    <div style="margin-top: 20px; font-size: 11px;">Powered by Firebase Auth</div>
+</div>
+
+<div class="xp-window" id="main_app">
+    <div class="title-bar">
+        <span>XP Finance Manager</span>
+        <div class="title-bar-btns"><span id="btn_logout">Log Off</span></div>
+    </div>
+    
+    <div class="content">
+        <fieldset style="margin-bottom: 8px;">
+            <legend>Pendapatan Bulan Ini</legend>
+            <input type="number" id="total_pendapatan" placeholder="Masukkan total pendapatan">
+        </fieldset>
+
+        <div class="split-layout">
+            <div>
+                <fieldset>
+                    <legend>Pengeluaran Tetap</legend>
+                    <div class="input-group"><label>1. Cicilan Rp:</label><input type="number" id="cicilan" value="0"></div>
+                    <div class="input-group"><label>2. Kontrakan Rp:</label><input type="number" id="kontrakan" value="0"></div>
+                    <div class="input-group"><label>3. IPL Rp:</label><input type="number" id="ipl" value="0"></div>
+                </fieldset>
+            </div>
+            <div>
+                <fieldset>
+                    <legend>Alokasi Sisa</legend>
+                    <div class="input-group"><label>1. Harian (Live Saldo)</label><input type="text" id="alokasi_harian" readonly></div>
+                    <div class="input-group"><label>2. Darurat (30%)</label><input type="text" id="alokasi_darurat" readonly></div>
+                    <div class="input-group"><label>3. Refreshing (20%)</label><input type="text" id="alokasi_refreshing" readonly></div>
+                    <button class="action-btn" id="btn_hitung">Hitung & Simpan Base</button>
+                </fieldset>
+            </div>
+        </div>
+
+        <fieldset>
+            <legend>Standar Batas Pengeluaran Harian</legend>
+            <div id="label_batas_harian" style="text-align:center; font-size: 14px; font-weight: bold; color: #0054e3;">
+                Rp 0 / hari
+            </div>
+        </fieldset>
+
+        <div class="dark-chart-container">
+            <canvas id="financeChart"></canvas>
+        </div>
+
+        <fieldset style="margin-top: 10px;">
+            <legend>Input Transaksi Harian</legend>
+            <div class="split-layout">
+                <div>
+                    <label>Tgl</label>
+                    <input type="text" id="tgl_input" readonly>
+                </div>
+                <div>
+                    <label>Jenis</label>
+                    <select id="jenis_input">
+                        <option value="keluar">Pengeluaran (-)</option>
+                        <option value="masuk">Pemasukan Tambahan (+)</option>
+                    </select>
+                </div>
+            </div>
+            <div class="split-layout">
+                <div>
+                    <label>Deskripsi</label>
+                    <input type="text" id="deskripsi_input">
+                </div>
+                <div>
+                    <label>Nominal Rp</label>
+                    <input type="number" id="nominal_input">
+                </div>
+            </div>
+            <button class="action-btn" id="btn_simpan_transaksi">Simpan Transaksi</button>
+        </fieldset>
+
+        <fieldset style="margin-top: 10px;">
+            <legend class="header-flex" style="width:100%;">
+                <span id="label_periode"></span>
+                <button class="btn-excel" id="btn_export_excel">Export to Excel</button>
+            </legend>
+            <div class="rekap-container">
+                <table id="tabel_rekap">
+                    <thead>
+                        <tr>
+                            <th>Tgl</th>
+                            <th>Desk/Jenis</th>
+                            <th>Nominal</th>
+                            <th>Status & Saldo Harian</th>
+                        </tr>
+                    </thead>
+                    <tbody></tbody>
+                </table>
+            </div>
+            <div class="summary-box" id="summary_bulanan">
+                Sisa Anggaran Harian Bulan Ini: Rp 0 <br>
+                <span style="color: grey">Menunggu kalkulasi...</span>
+            </div>
+        </fieldset>
+    </div>
+</div>
+
+<div class="xp-overlay" id="xp_dialog">
+    <div class="xp-dialog">
+        <div class="title" id="dialog_title">System Message</div>
+        <div class="body">
+            <p id="dialog_message">Message here</p>
+            <button class="action-btn" style="width: 80px;" onclick="document.getElementById('xp_dialog').style.display='none'">OK</button>
+        </div>
+    </div>
+</div>
+
+<script type="module">
+  import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
+  import { getAuth, signInWithEmailAndPassword, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
+  import { getDatabase, ref, set, push, onValue } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-database.js";
+
+  const firebaseConfig = {
+    apiKey: "AIzaSyBZMPSEQhCgM8vvEbotEO5Ck15VpuFXHY4",
+    authDomain: "server-323.firebaseapp.com",
+    databaseURL: "https://server-323-default-rtdb.asia-southeast1.firebasedatabase.app",
+    projectId: "server-323",
+    storageBucket: "server-323.firebasestorage.app",
+    messagingSenderId: "411152653914",
+    appId: "1:411152653914:web:88ba5f277172400b31c263",
+    measurementId: "G-WRDRC4WSWQ"
+  };
+
+  const app = initializeApp(firebaseConfig);
+  const auth = getAuth(app);
+  const db = getDatabase(app);
+
+  // Global State
+  let baseBatasHarian = 0;
+  let alokasiHarianBulanan = 0;
+  
+  let globalTotalMasuk = 0;
+  let globalTotalKeluar = 0;
+  let rawDataForExcel = {}; 
+  let batasHarianEfektif = 0; 
+  
+  const currentPeriode = new Date().toLocaleString('id-ID', { month: 'long', year: 'numeric' });
+  const todayDate = new Date().getDate().toString();
+  const daysInMonth = new Date(new Date().getFullYear(), new Date().getMonth() + 1, 0).getDate();
+
+  document.getElementById('label_periode').innerText = "Rekap " + currentPeriode;
+  document.getElementById('tgl_input').value = todayDate;
+
+  const showDialog = (title, message) => {
+      document.getElementById('dialog_title').innerText = title;
+      document.getElementById('dialog_message').innerText = message;
+      document.getElementById('xp_dialog').style.display = 'flex';
+  };
+  const formatRp = (num) => "Rp " + num.toLocaleString('id-ID');
+
+  // --- FUNGSI UPDATE SALDO LIVE (SUDAH DIPERBAIKI BUG-NYA) ---
+  function updateSaldoLive() {
+      const saldoRealTime = (alokasiHarianBulanan + globalTotalMasuk) - globalTotalKeluar;
+      const elAlokasi = document.getElementById('alokasi_harian');
+      elAlokasi.value = formatRp(saldoRealTime);
+      
+      const summaryBox = document.getElementById('summary_bulanan');
+      
+      if (saldoRealTime >= 0) {
+          summaryBox.innerHTML = `Sisa Anggaran Harian: ${formatRp(saldoRealTime)}<br><span class="status-ok">Keuangan Terkendali</span>`;
+          elAlokasi.style.color = "#006600";
+          elAlokasi.style.backgroundColor = "#d4fcd4";
+      } else {
+          summaryBox.innerHTML = `Defisit Anggaran Harian: ${formatRp(Math.abs(saldoRealTime))}<br><span class="status-bad">Overbudget! Kurangi pengeluaran.</span>`;
+          elAlokasi.style.color = "#ff0000";
+          elAlokasi.style.backgroundColor = "#ffe6e6";
+      }
+  }
+
+  // --- 1. AUTHENTICATION ---
+  const loginScreen = document.getElementById('login_screen');
+  const mainApp = document.getElementById('main_app');
+
+  onAuthStateChanged(auth, (user) => {
+      if (user) {
+          loginScreen.style.display = 'none';
+          mainApp.style.display = 'flex';
+          loadDataAlokasi();
+          loadDataTransaksi();
+      } else {
+          loginScreen.style.display = 'flex';
+          mainApp.style.display = 'none';
+      }
+  });
+
+  document.getElementById('btn_login').addEventListener('click', () => {
+      const email = document.getElementById('login_email').value;
+      const pass = document.getElementById('login_pass').value;
+      signInWithEmailAndPassword(auth, email, pass)
+          .catch(() => showDialog("Logon Failed", "Email atau Password salah!"));
+  });
+  document.getElementById('btn_logout').addEventListener('click', () => signOut(auth));
+
+  // --- 2. CHART.JS (DIUBAH MENJADI MURNI LINE CHART) ---
+  Chart.defaults.color = '#aaaaaa';
+  Chart.defaults.borderColor = '#333333';
+  const ctx = document.getElementById('financeChart').getContext('2d');
+  const financeChart = new Chart(ctx, {
+      type: 'line', 
+      data: { labels: [], datasets: [] },
+      options: {
+          responsive: true, maintainAspectRatio: false,
+          plugins: { legend: { display: true, labels: { color: '#ccc', font: {size: 9}, boxWidth: 10 } } },
+          scales: {
+              x: { grid: { display: false }, ticks: { font: {size: 9} } },
+              y: { beginAtZero: true, ticks: { display: false } }
+          },
+          interaction: { mode: 'index', intersect: false }
+      }
+  });
+
+  // --- 3. ALOKASI KEUANGAN ---
+  document.getElementById('btn_hitung').addEventListener('click', () => {
+      const p = Number(document.getElementById('total_pendapatan').value) || 0;
+      const c = Number(document.getElementById('cicilan').value) || 0;
+      const k = Number(document.getElementById('kontrakan').value) || 0;
+      const i = Number(document.getElementById('ipl').value) || 0;
+
+      const sisa = p - (c + k + i);
+      if (sisa < 0) return showDialog("Peringatan", "Pendapatan tidak cukup!");
+
+      const harian = sisa * 0.50;
+      const batas = Math.floor(harian / daysInMonth);
+
+      set(ref(db, 'alokasi_keuangan'), {
+          pendapatan: p, cicilan: c, kontrakan: k, ipl: i, 
+          harian: harian, darurat: sisa*0.30, refreshing: sisa*0.20, batasHarian: batas
+      }).then(() => showDialog("Sukses", "Base Alokasi diperbarui."));
+  });
+
+  function loadDataAlokasi() {
+      onValue(ref(db, 'alokasi_keuangan'), (snapshot) => {
+          const data = snapshot.val();
+          if (data) {
+              document.getElementById('total_pendapatan').value = data.pendapatan;
+              document.getElementById('cicilan').value = data.cicilan;
+              document.getElementById('kontrakan').value = data.kontrakan;
+              document.getElementById('ipl').value = data.ipl;
+              
+              document.getElementById('alokasi_darurat').value = formatRp(data.darurat);
+              document.getElementById('alokasi_refreshing').value = formatRp(data.refreshing);
+              
+              baseBatasHarian = data.batasHarian;
+              alokasiHarianBulanan = data.harian; 
+              
+              updateSaldoLive(); 
+          }
+      });
+  }
+
+  // --- 4. TRANSAKSI HARIAN ---
+  document.getElementById('btn_simpan_transaksi').addEventListener('click', () => {
+      const desk = document.getElementById('deskripsi_input').value;
+      const nom = Number(document.getElementById('nominal_input').value);
+      const jenis = document.getElementById('jenis_input').value;
+
+      if (!desk || nom <= 0) return showDialog("Error", "Isi deskripsi & nominal!");
+
+      push(ref(db, 'transaksi_harian/' + currentPeriode), {
+          tgl: todayDate, deskripsi: desk, nominal: nom, jenis: jenis, timestamp: Date.now()
+      }).then(() => {
+          document.getElementById('deskripsi_input').value = '';
+          document.getElementById('nominal_input').value = '';
+      });
+  });
+
+  function loadDataTransaksi() {
+      onValue(ref(db, 'transaksi_harian/' + currentPeriode), (snapshot) => {
+          const data = snapshot.val();
+          rawDataForExcel = {}; 
+          const tbody = document.querySelector('#tabel_rekap tbody');
+          tbody.innerHTML = '';
+          
+          globalTotalMasuk = 0;
+          globalTotalKeluar = 0;
+          let dataPerTanggal = {};
+          let chartLabels = []; let chartDataMasuk = []; let chartDataKeluar = []; let chartDataBatas = [];
+
+          if (data) {
+              Object.values(data).forEach(item => {
+                  if (!dataPerTanggal[item.tgl]) {
+                      dataPerTanggal[item.tgl] = { items: [], totMasuk: 0, totKeluar: 0 };
+                  }
+                  dataPerTanggal[item.tgl].items.push(item);
+                  
+                  if (item.jenis === 'masuk') {
+                      dataPerTanggal[item.tgl].totMasuk += item.nominal;
+                      globalTotalMasuk += item.nominal;
+                  } else {
+                      dataPerTanggal[item.tgl].totKeluar += item.nominal;
+                      globalTotalKeluar += item.nominal;
+                  }
+              });
+
+              const tambahanHarianDariPemasukan = Math.floor(globalTotalMasuk / daysInMonth);
+              batasHarianEfektif = baseBatasHarian + tambahanHarianDariPemasukan;
+
+              let htmlLabelBatas = `${formatRp(batasHarianEfektif)} / hari`;
+              if (tambahanHarianDariPemasukan > 0) {
+                  htmlLabelBatas += `<br><span style="font-size:10px; color:#008000; font-weight:normal;">
+                      (Base: ${formatRp(baseBatasHarian)} + Ekstra: ${formatRp(tambahanHarianDariPemasukan)})
+                  </span>`;
+              }
+              document.getElementById('label_batas_harian').innerHTML = htmlLabelBatas;
+
+              rawDataForExcel = dataPerTanggal;
+
+              const sortedDates = Object.keys(dataPerTanggal).sort((a,b) => Number(a) - Number(b));
+
+              sortedDates.forEach(tgl => {
+                  const dayData = dataPerTanggal[tgl];
+                  const rowSpan = dayData.items.length;
+                  
+                  const sisaSaldoHariIni = batasHarianEfektif - dayData.totKeluar;
+                  const isOverLimit = sisaSaldoHariIni < 0;
+                  
+                  let trendIcon = '';
+                  if (sisaSaldoHariIni > baseBatasHarian) { trendIcon = '<span style="color:#00cc00; font-size:14px; font-weight:bold;">&#9650;</span>'; } 
+                  else if (sisaSaldoHariIni < baseBatasHarian) { trendIcon = '<span style="color:#ff0000; font-size:14px; font-weight:bold;">&#9660;</span>'; } 
+                  else { trendIcon = '<span style="color:gray; font-size:14px;">&#9644;</span>'; }
+
+                  const statusText = isOverLimit ? "Melebihi Batas!" : "OK";
+                  const statusClass = isOverLimit ? "status-bad" : "status-ok";
+                  
+                  const infoBatas = `Batas: ${formatRp(batasHarianEfektif)}<br>Keluar: ${formatRp(dayData.totKeluar)}<br><b>Saldo: ${formatRp(sisaSaldoHariIni)} ${trendIcon}</b>`;
+
+                  chartLabels.push(tgl); chartDataMasuk.push(dayData.totMasuk); chartDataKeluar.push(dayData.totKeluar); chartDataBatas.push(batasHarianEfektif);
+
+                  dayData.items.forEach((item, index) => {
+                      let tr = document.createElement('tr');
+                      if (index === 0) tr.innerHTML += `<td class="center" rowspan="${rowSpan}">${tgl}</td>`;
+                      
+                      const sign = item.jenis === 'masuk' ? '+' : '-';
+                      const colorClass = item.jenis === 'masuk' ? 'text-masuk' : 'text-keluar';
+                      
+                      tr.innerHTML += `<td>${item.deskripsi} <br><i style="font-size:9px">(${item.jenis})</i></td><td class="${colorClass}">${sign}${formatRp(item.nominal)}</td>`;
+                      
+                      if (index === 0) {
+                          tr.innerHTML += `<td class="center ${statusClass}" rowspan="${rowSpan}">${statusText}<hr style="margin:2px 0; border-top:1px solid #ccc;">${infoBatas}</td>`;
+                      }
+                      tbody.appendChild(tr);
+                  });
+              });
+          } else {
+              batasHarianEfektif = baseBatasHarian;
+              document.getElementById('label_batas_harian').innerHTML = `${formatRp(baseBatasHarian)} / hari`;
+          }
+
+          updateSaldoLive();
+
+          financeChart.data.labels = chartLabels;
+          financeChart.data.datasets = [
+              { label: 'Batas Pengeluaran', data: chartDataBatas, borderColor: '#ffffff', borderDash: [5, 5], borderWidth: 1, tension: 0, pointRadius: 0, fill: false },
+              { label: 'Pemasukan (+)', data: chartDataMasuk, borderColor: '#00ff00', backgroundColor: '#00ff00', borderWidth: 2, tension: 0.3, fill: false },
+              { label: 'Pengeluaran (-)', data: chartDataKeluar, borderColor: '#ff3333', backgroundColor: '#ff3333', borderWidth: 2, tension: 0.3, fill: false }
+          ];
+          financeChart.update();
+      });
+  }
+
+  // --- 5. EXPORT KE EXCEL ---
+  document.getElementById('btn_export_excel').addEventListener('click', () => {
+      if (Object.keys(rawDataForExcel).length === 0) return showDialog("Gagal", "Tidak ada data untuk diexport bulan ini.");
+
+      let sheetData = [['Tanggal', 'Deskripsi', 'Jenis', 'Nominal (Rp)', 'Batas Harian Efektif (Rp)', 'Total Pengeluaran (Rp)', 'Sisa Saldo Harian (Rp)', 'Status Harian']];
+      const sortedDates = Object.keys(rawDataForExcel).sort((a,b) => Number(a) - Number(b));
+
+      sortedDates.forEach(tgl => {
+          const dayData = rawDataForExcel[tgl];
+          const sisaSaldoHariIni = batasHarianEfektif - dayData.totKeluar;
+          const statusHariIni = sisaSaldoHariIni < 0 ? 'Melebihi Batas' : 'OK';
+
+          dayData.items.forEach((item, index) => {
+              if (index === 0) {
+                  sheetData.push([tgl, item.deskripsi, item.jenis, item.nominal, batasHarianEfektif, dayData.totKeluar, sisaSaldoHariIni, statusHariIni]);
+              } else {
+                  sheetData.push([tgl, item.deskripsi, item.jenis, item.nominal, '', '', '', '']);
+              }
+          });
+      });
+
+      let ws = XLSX.utils.aoa_to_sheet(sheetData);
+      let wb = XLSX.utils.book_new();
+      XLSX.utils.book_append_sheet(wb, ws, "Rekap_Keuangan");
+      XLSX.writeFile(wb, `Rekap_Keuangan_Arinex_${currentPeriode.replace(' ', '_')}.xlsx`);
+  });
+</script>
+</body>
+  </html>
